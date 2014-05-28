@@ -118,8 +118,8 @@ func (sc *Scanner) lex() {
 				return
 			}
 		} else if r == '(' || r == ')' {
-			// in a list
-			err := sc.lexType(lexList)
+			// in a set
+			err := sc.lexType(lexSet)
 			if err != nil {
 				return
 			}

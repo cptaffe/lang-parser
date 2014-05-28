@@ -39,7 +39,7 @@ func (p *Parser) parse() {
 		case token.VARIABLE:
 			s := string(t.Ch) // string
 			fmt.Printf("%s %s\n", t, stringify(s))
-		case token.LIST:
+		case token.SET:
 			s := string(t.Ch) // string
 			fmt.Printf("%s %s\n", t, stringify(s))
 		}

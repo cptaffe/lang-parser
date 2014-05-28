@@ -17,7 +17,7 @@ const (
 
 	// type collections
 	begin_typeCols
-	LIST // (innards)
+	SET // (innards)
 	end_typeCols
 
 	begin_operators
@@ -35,7 +35,7 @@ var token = [...]string{
 	ERR:      "parse error",
 	INTEGER:  "int",
 	FLOAT:    "float",
-	LIST:     "list",
+	SET:      "set",
 	VARIABLE: "var",
 }
 

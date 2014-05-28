@@ -58,9 +58,9 @@ func lexCharacter(sc *Scanner) (err error) {
 	}
 }
 
-func lexList(sc *Scanner) (err error) {
-	// send list beginning/end
-	sc.c <- token.NewToken(token.LIST, sc.ch, sc.pos, sc.pos)
+func lexSet(sc *Scanner) (err error) {
+	// send set beginning/end
+	sc.c <- token.NewToken(token.SET, sc.ch, sc.pos, sc.pos)
 	_, err = sc.next()
 	return
 }
