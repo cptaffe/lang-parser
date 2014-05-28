@@ -20,6 +20,7 @@ func (p *Parser) parse() {
 	for {
 		t := <-p.c
 		if t == nil {
+			//fmt.Printf("got nil.\n")
 			return
 		}
 		switch t.Id {
@@ -36,6 +37,9 @@ func (p *Parser) parse() {
 			}
 			fmt.Printf("%s %s\n", t, stringify(fmt.Sprintf("%d", i)))
 		case token.VARIABLE:
+			s := string(t.Ch) // string
+			fmt.Printf("%s %s\n", t, stringify(s))
+		case token.LIST:
 			s := string(t.Ch) // string
 			fmt.Printf("%s %s\n", t, stringify(s))
 		}

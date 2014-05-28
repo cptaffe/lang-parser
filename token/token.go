@@ -9,16 +9,22 @@ import (
 // Language id constants
 const (
 	ERR = iota
+	// types
 	begin_types
 	INTEGER
 	FLOAT
 	end_types
 
+	// type collections
+	begin_typeCols
+	LIST // (innards)
+	end_typeCols
+
 	begin_operators
-	PLUS     // +()
-	MINUS    // -()
-	MULTIPLY // *()
-	DIVIDE   // /()
+	PLUS     // +
+	MINUS    // -
+	MULTIPLY // *
+	DIVIDE   // /
 	end_operators
 
 	COMMENT
@@ -29,6 +35,7 @@ var token = [...]string{
 	ERR:      "parse error",
 	INTEGER:  "int",
 	FLOAT:    "float",
+	LIST:     "list",
 	VARIABLE: "var",
 }
 
@@ -60,18 +67,15 @@ type Token struct {
 }
 
 func (t *Token) String() (s string) {
-	return fmt.Sprintf("%s \x1b[36m%s\x1b[0m(%s)", t.End, token[t.Id], string(t.Ch))
+	return fmt.Sprintf("%s \x1b[36m%s\x1b[0m(%s)", t.Begin, token[t.Id], string(t.Ch))
 }
 
 func (t *Token) Add(r rune, p *Pos) {
-	//fmt.Printf("%c\n", r)
 	t.Ch = append(t.Ch, r)
 	t.End = p
 }
 
 func NewToken(id int, c rune, b *Pos, e *Pos) (t *Token) {
-	//r := make([]rune, 10, 100)
-	//r[0] = c
 	t = &Token{id, []rune{c}, b, e}
 	return
 }
@@ -84,5 +88,5 @@ type Pos struct {
 }
 
 func (p *Pos) String() string {
-	return fmt.Sprintf("(%d,%d)", p.Ln+1, p.Ch)
+	return fmt.Sprintf("(%d,%d)", p.Ln, p.Ch)
 }

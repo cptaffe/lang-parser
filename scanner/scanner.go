@@ -20,7 +20,7 @@ type Scanner struct {
 }
 
 // New Scanner from file
-func NewScanner(f *token.File) (s *Scanner) {
+func Init(f *token.File) (s *Scanner) {
 	s = new(Scanner)
 	s.file = f
 	s.pos = new(token.Pos)
@@ -80,106 +80,63 @@ func (sc *Scanner) errors(t *token.Token, err error) {
 }
 
 // die dies gracefully
-func (sc *Scanner) die(m string) {
-	if m != "" {
-		sc.errors(token.NewToken(0, sc.ch, sc.pos, sc.pos), errors.New(m))
+func (sc *Scanner) die(err error) {
+	if err != io.EOF {
+		sc.errors(token.NewToken(0, sc.ch, sc.pos, sc.pos), err)
 	}
 	sc.c <- nil
 	return
 }
 
-func (sc *Scanner) lexNumber() (t *token.Token, err error) {
-	t = token.NewToken(token.INTEGER, sc.ch, sc.pos, sc.pos)
-	for {
-		var r rune
-		deci := false
-		r, err = sc.next()
-		if err != nil {
-			return
-		}
-		// lex int
-		if '0' <= r && r <= '9' {
-			t.Add(r, sc.pos)
-			// lex float
-		} else if r == '.' {
-			if !deci {
-				t.Id = token.FLOAT // float
-				t.Add(r, sc.pos)
-				deci = true
-			} else {
-				return t, errors.New("more than one decimal")
-			}
-		} else {
-			// do not have to backup() b/c lex next()s at end.
-			return
-		}
-	}
-}
+// lexer type
+type lexer func(sc *Scanner) (err error)
 
-func (sc *Scanner) lexCharacter() (t *token.Token, err error) {
-	t = token.NewToken(token.VARIABLE, sc.ch, sc.pos, sc.pos)
-	for {
-		var r rune
-		r, err = sc.next()
-		if err != nil {
-			return
-		}
-		// lex variable
-		if ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') {
-			t.Add(r, sc.pos)
-		} else {
-			return
-		}
+func (sc *Scanner) lexType(l lexer) (err error) {
+	err = l(sc)
+	if err != nil {
+		sc.die(err)
 	}
+	return
 }
 
 // lex lexes the file
 func (sc *Scanner) lex() {
-	var r rune // current rune
+	sc.next()
 	for {
-		r = sc.ch
-		if '0' <= r && r <= '9' {
-			t, err := sc.lexNumber()
+		r := sc.ch
+		if r == 0xFFFD || r == ' ' {
+			// unknown character, ignore.
+			_, err := sc.next()
 			if err != nil {
-				if err == io.EOF {
-					sc.die("eof")
-				} else {
-					sc.die("reading error")
-				}
-
+				sc.die(err)
 				return
-			} else {
-				sc.c <- t
+			}
+		} else if '0' <= r && r <= '9' {
+			// numbers
+			err := sc.lexType(lexNumber)
+			if err != nil {
+				return
+			}
+		} else if r == '(' || r == ')' {
+			// in a list
+			err := sc.lexType(lexList)
+			if err != nil {
+				return
 			}
 		} else if ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') {
-			t, err := sc.lexCharacter()
+			// characters
+			err := sc.lexType(lexCharacter)
 			if err != nil {
-				if err == io.EOF {
-					sc.die("eof")
-				} else {
-					sc.die("reading error")
-				}
-
 				return
-			} else {
-				sc.c <- t
 			}
 		} else {
 			e := errors.New("unexpected rune")
-			sc.errors(&token.Token{0, []rune{sc.ch}, sc.pos, sc.pos}, e)
-		}
-
-		// get next character as last thing in loop
-		rn, err := sc.next()
-		r = rn
-		if err != nil {
-			// reading error
-			if err == io.EOF {
-				sc.die("eof")
-			} else {
-				sc.die("reading error")
+			sc.errors(&token.Token{token.ERR, []rune{sc.ch}, sc.pos, sc.pos}, e)
+			_, err := sc.next()
+			if err != nil {
+				sc.die(err)
+				return
 			}
-			return
 		}
 	}
 }
