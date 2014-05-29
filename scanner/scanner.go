@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cptaffe/parser/token"
 	"io"
+	"os"
 	"unicode/utf8"
 )
 
@@ -17,6 +18,9 @@ type Scanner struct {
 	ch  rune
 	pos *token.Pos
 	src []byte
+
+	// errors
+	errors errorHandler
 }
 
 // New Scanner from file
@@ -24,7 +28,26 @@ func Init(f *token.File) (s *Scanner) {
 	s = new(Scanner)
 	s.file = f
 	s.pos = new(token.Pos)
+	s.errors = printError
 	return
+}
+
+type errorHandler func(t *token.Token, err error)
+
+// prints errors
+// default errorHandler
+func printError(t *token.Token, err error) {
+	fmt.Printf("%s \x1b[31merror\x1b[0m: %s\n", t, err)
+	return
+}
+
+// unrecoverable error
+func (sc *Scanner) die(err error) {
+	if err != io.EOF {
+		sc.errors(token.NewToken(0, sc.ch, sc.pos, sc.pos), err)
+	}
+	//sc.c <- nil
+	os.Exit(1)
 }
 
 // returns next character
@@ -73,26 +96,11 @@ func (sc *Scanner) peek() (r rune, err error) {
 	return
 }
 
-// prints errors
-func (sc *Scanner) errors(t *token.Token, err error) {
-	fmt.Printf("%s \x1b[31merror\x1b[0m: %s\n", t, err)
-	return
-}
-
-// die dies gracefully
-func (sc *Scanner) die(err error) {
-	if err != io.EOF {
-		sc.errors(token.NewToken(0, sc.ch, sc.pos, sc.pos), err)
-	}
-	sc.c <- nil
-	return
-}
-
 // lexer type
-type lexer func(sc *Scanner) (err error)
+type lexer func(sc *Scanner) (t *token.Token, err error)
 
 func (sc *Scanner) lexType(l lexer) (err error) {
-	err = l(sc)
+	_, err = l(sc)
 	if err != nil {
 		sc.die(err)
 	}
@@ -117,21 +125,27 @@ func (sc *Scanner) lex() {
 			if err != nil {
 				return
 			}
-		} else if r == '(' || r == ')' {
-			// in a set
-			err := sc.lexType(lexSet)
-			if err != nil {
-				return
-			}
 		} else if ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') {
 			// characters
 			err := sc.lexType(lexCharacter)
 			if err != nil {
 				return
 			}
+		} else if r == '(' {
+			// in a set
+			err := sc.lexType(lexSet)
+			if err != nil {
+				return
+			}
+		} else if r == '+' || r == '-' || r == '*' || r == '/' {
+			// characters
+			err := sc.lexType(lexOperator)
+			if err != nil {
+				return
+			}
 		} else {
 			e := errors.New("unexpected rune")
-			sc.errors(&token.Token{token.ERR, []rune{sc.ch}, sc.pos, sc.pos}, e)
+			sc.errors(&token.Token{token.ERR, []rune{sc.ch}, *sc.pos, *sc.pos}, e)
 			_, err := sc.next()
 			if err != nil {
 				sc.die(err)

@@ -9,8 +9,8 @@ import (
 
 // Lexers that comply to the type lexer: func(Scanner) (t *token.Token, err error)
 
-func lexNumber(sc *Scanner) (err error) {
-	t := token.NewToken(token.INTEGER, sc.ch, sc.pos, sc.pos)
+func lexNumber(sc *Scanner) (t *token.Token, err error) {
+	t = token.NewToken(token.INTEGER, sc.ch, sc.pos, sc.pos)
 	for {
 		var r rune
 		deci := false
@@ -28,7 +28,7 @@ func lexNumber(sc *Scanner) (err error) {
 				t.Add(r, sc.pos)
 				deci = true
 			} else {
-				return errors.New("more than one decimal")
+				return t, errors.New("more than one decimal")
 			}
 		} else {
 			sc.c <- t
@@ -37,8 +37,8 @@ func lexNumber(sc *Scanner) (err error) {
 	}
 }
 
-func lexCharacter(sc *Scanner) (err error) {
-	t := token.NewToken(token.VARIABLE, sc.ch, sc.pos, sc.pos)
+func lexCharacter(sc *Scanner) (t *token.Token, err error) {
+	t = token.NewToken(token.VARIABLE, sc.ch, sc.pos, sc.pos)
 	for {
 		var r rune
 		r, err = sc.next()
@@ -58,10 +58,51 @@ func lexCharacter(sc *Scanner) (err error) {
 	}
 }
 
-func lexSet(sc *Scanner) (err error) {
+func lexSet(sc *Scanner) (t *token.Token, err error) {
 	// send set beginning/end
 	sc.c <- token.NewToken(token.SET, sc.ch, sc.pos, sc.pos)
 	_, err = sc.next()
+	if err != nil {
+		return
+	}
+
+	for r := sc.ch; r != ')'; r = sc.ch {
+		// list must be of one type
+		if '0' <= r && r <= '9' {
+			err = sc.lexType(lexNumber)
+			if err != nil {
+				return
+			}
+		} else if r == ' ' {
+			r, err = sc.next()
+			if err != nil {
+				return
+			}
+		} else {
+			return
+		}
+	}
+	// ')' has been found
+	sc.c <- token.NewToken(token.SET, sc.ch, sc.pos, sc.pos)
+	_, err = sc.next()
+	return
+}
+
+func lexOperator(sc *Scanner) (t *token.Token, err error) {
+	var tok int
+	switch sc.ch {
+	case '+':
+		tok = token.PLUS
+	case '-':
+		tok = token.MINUS
+	case '*':
+		tok = token.MULTIPLY
+	case '/':
+		tok = token.DIVIDE
+	}
+	sc.c <- token.NewToken(tok, sc.ch, sc.pos, sc.pos)
+	_, err = sc.next()
+	err = sc.lexType(lexSet)
 	return
 }
 

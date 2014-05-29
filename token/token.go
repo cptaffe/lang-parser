@@ -32,11 +32,20 @@ const (
 )
 
 var token = [...]string{
-	ERR:      "parse error",
-	INTEGER:  "int",
-	FLOAT:    "float",
-	SET:      "set",
+	// error
+	ERR: "parse error",
+	// types
+	INTEGER: "int",
+	FLOAT:   "float",
+	// type sets
+	SET: "set",
+	// variable
 	VARIABLE: "var",
+	// operators
+	PLUS:     "add",
+	MINUS:    "sub",
+	MULTIPLY: "mult",
+	DIVIDE:   "div",
 }
 
 // File
@@ -62,8 +71,8 @@ func NewFile(fn string) (f *File, err error) {
 type Token struct {
 	Id    int
 	Ch    []rune
-	Begin *Pos
-	End   *Pos
+	Begin Pos
+	End   Pos
 }
 
 func (t *Token) String() (s string) {
@@ -72,11 +81,11 @@ func (t *Token) String() (s string) {
 
 func (t *Token) Add(r rune, p *Pos) {
 	t.Ch = append(t.Ch, r)
-	t.End = p
+	t.End = *p
 }
 
 func NewToken(id int, c rune, b *Pos, e *Pos) (t *Token) {
-	t = &Token{id, []rune{c}, b, e}
+	t = &Token{id, []rune{c}, *b, *e}
 	return
 }
 
@@ -87,6 +96,6 @@ type Pos struct {
 	Ch int
 }
 
-func (p *Pos) String() string {
+func (p Pos) String() string {
 	return fmt.Sprintf("(%d,%d)", p.Ln, p.Ch)
 }
